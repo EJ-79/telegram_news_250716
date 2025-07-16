@@ -129,8 +129,22 @@ def collect_filtered_news():
     
     return all_filtered_news
 
-def create_news_summary(news_list, max_news=10):
-    """뉴스 요약 메시지 생성"""
+def smart_truncate(text, length):
+    """스마트하게 텍스트 자르기 (단어 단위)"""
+    if len(text) <= length:
+        return text
+    
+    # 길이 내에서 마지막 공백 찾기
+    truncated = text[:length]
+    last_space = truncated.rfind(' ')
+    
+    if last_space > length * 0.8:  # 80% 이상이면 단어 단위로 자르기
+        return truncated[:last_space] + "..."
+    else:
+        return truncated + "..."
+
+def create_news_summary(news_list, max_news=8):
+    """뉴스 요약 메시지 생성 (개선된 버전)"""
     if not news_list:
         return "📰 오늘은 AI/양자 관련 뉴스가 없습니다."
     
@@ -144,24 +158,41 @@ def create_news_summary(news_list, max_news=10):
     message += f"📅 {current_time} (한국시간)\n\n"
     
     if ai_news:
-        message += f"🤖 <b>AI 뉴스 ({len(ai_news)}개)</b>\n"
+        message += f"🤖 <b>AI 뉴스 ({len(ai_news)}개 중 {min(len(ai_news), max_news//2)}개)</b>\n\n"
         for i, news in enumerate(ai_news[:max_news//2], 1):
-            title = news['title'][:60] + "..." if len(news['title']) > 60 else news['title']
-            message += f"{i}. [{news['source']}] {title}\n"
+            # 제목을 80자로 늘리고 스마트하게 자르기
+            title = smart_truncate(news['title'], 80)
+            
+            message += f"<b>{i}. {title}</b>\n"
+            message += f"   📰 {news['source']}\n"
+            
+            # 요약이 있으면 첫 100자 추가
+            if news.get('summary') and len(news['summary']) > 10:
+                summary = smart_truncate(news['summary'], 100)
+                message += f"   💭 {summary}\n"
+            
             message += f"   🔗 <a href='{news['link']}'>기사 보기</a>\n\n"
     
     if quantum_news:
-        message += f"⚛️ <b>양자 뉴스 ({len(quantum_news)}개)</b>\n"
+        message += f"⚛️ <b>양자 뉴스 ({len(quantum_news)}개 중 {min(len(quantum_news), max_news//2)}개)</b>\n\n"
         for i, news in enumerate(quantum_news[:max_news//2], 1):
-            title = news['title'][:60] + "..." if len(news['title']) > 60 else news['title']
-            message += f"{i}. [{news['source']}] {title}\n"
+            title = smart_truncate(news['title'], 80)
+            
+            message += f"<b>{i}. {title}</b>\n"
+            message += f"   📰 {news['source']}\n"
+            
+            if news.get('summary') and len(news['summary']) > 10:
+                summary = smart_truncate(news['summary'], 100)
+                message += f"   💭 {summary}\n"
+            
             message += f"   🔗 <a href='{news['link']}'>기사 보기</a>\n\n"
     
     # 텔레그램 메시지 길이 제한 (4096자)
-    if len(message) > 4000:
-        message = message[:4000] + "...\n\n📱 <i>더 많은 뉴스가 있습니다!</i>"
+    if len(message) > 3800:  # 여유분 확보
+        message = message[:3800] + "...\n\n📱 <i>더 많은 뉴스가 있습니다!</i>"
     
-    message += f"\n🔄 <i>다음 업데이트: 12시간 후</i>"
+    message += f"\n🔄 <i>다음 업데이트: 12시간 후</i>\n"
+    message += f"🤖 <i>AI & 양자 뉴스봇 v1.0</i>"
     
     return message
 
