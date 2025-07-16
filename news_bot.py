@@ -1,69 +1,14 @@
 import requests
 import feedparser
 import json
-import os
+import re
 from datetime import datetime
-
-# 환경 변수에서 설정 읽기 (GitHub Secrets에서 설정할 예정)
-BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-
-# RSS 피드 URL들
-RSS_FEEDS = {
-    'TechCrunch': 'https://techcrunch.com/feed/',
-    'Yahoo Finance': 'https://finance.yahoo.com/rss/',
-    'IEEE Spectrum': 'https://spectrum.ieee.org/rss/fulltext',
-    'Ars Technica': 'https://feeds.arstechnica.com/arstechnica/index',
-}
-
-# 관심 키워드 (확장된 버전)
-AI_KEYWORDS = [
-    'artificial intelligence', 'AI', 'machine learning', 'deep learning', 
-    'neural network', 'LLM', 'ChatGPT', 'OpenAI', 'anthropic', 'claude',
-    'generative AI', 'transformer', 'GPT', 'large language model',
-    'computer vision', 'natural language processing', 'NLP', 'robotics',
-    'autonomous', 'self-driving', 'AI chip', 'nvidia AI', 'google AI',
-    'microsoft AI', 'AI startup', 'AI funding', 'AI breakthrough',
-    'foundation model', 'multimodal AI', 'AI safety', 'AGI'
-]
-
-QUANTUM_KEYWORDS = [
-    'quantum', 'qubit', 'quantum computing', 'quantum communication', 
-    'quantum sensing', 'quantum internet', 'quantum supremacy', 
-    'quantum encryption', 'IBM quantum', 'Google quantum', 'quantum algorithm',
-    'quantum processor', 'quantum chip', 'quantum network', 'quantum cryptography',
-    'quantum advantage', 'quantum error correction', 'quantum entanglement',
-    'quantum teleportation', 'quantum simulation', 'quantum startup',
-    'quantum breakthrough', 'superconducting qubit', 'trapped ion',
-    'photonic quantum', 'quantum annealing', 'D-Wave', 'IonQ', 'Rigetti'
-]
-
-def send_message_to_telegram(message):
-    """텔레그램으로 메시지 전송"""
-    if not BOT_TOKEN or not CHAT_ID:
-        print("❌ 텔레그램 설정이 없습니다.")
-        return False
-        
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {
-        'chat_id': CHAT_ID,
-        'text': message,
-        'parse_mode': 'HTML',
-        'disable_web_page_preview': True
-    }
-    
-    try:
-        response = requests.post(url, data=data, timeout=30)
-        if response.status_code == 200:
-            print("✅ 텔레그램 메시지 전송 성공!")
-            return True
-        else:
-            print(f"❌ 텔레그램 전송 실패: {response.status_code}")
-            print(response.text)
-            return False
-    except Exception as e:
-        print(f"❌ 텔레그램 전송 오류: {e}")
-        return False
+from config import (
+    NEWS_RSS_FEEDS as RSS_FEEDS,
+    NEWS_AI_KEYWORDS as AI_KEYWORDS,
+    NEWS_QUANTUM_KEYWORDS as QUANTUM_KEYWORDS,
+    send_telegram_message
+)
 
 def check_keywords_in_text(text, keywords):
     """텍스트에 키워드가 포함되어 있는지 확인"""
@@ -105,7 +50,6 @@ def clean_and_enhance_summary(news_item, relevant_keywords):
     summary = news_item.get('summary', '')
     
     # HTML 태그 제거
-    import re
     summary = re.sub(r'<[^>]+>', '', summary)
     summary = summary.replace('&nbsp;', ' ').replace('&amp;', '&')
     
@@ -160,6 +104,20 @@ def filter_news_by_keywords(entries, keywords, category_name):
     filtered_news.sort(key=lambda x: x['importance_score'], reverse=True)
     return filtered_news
 
+def smart_truncate(text, length):
+    """스마트하게 텍스트 자르기 (단어 단위)"""
+    if len(text) <= length:
+        return text
+    
+    # 길이 내에서 마지막 공백 찾기
+    truncated = text[:length]
+    last_space = truncated.rfind(' ')
+    
+    if last_space > length * 0.8:  # 80% 이상이면 단어 단위로 자르기
+        return truncated[:last_space] + "..."
+    else:
+        return truncated + "..."
+
 def collect_filtered_news():
     """모든 사이트에서 뉴스 수집 및 필터링"""
     all_filtered_news = []
@@ -197,20 +155,6 @@ def collect_filtered_news():
             continue
     
     return all_filtered_news
-
-def smart_truncate(text, length):
-    """스마트하게 텍스트 자르기 (단어 단위)"""
-    if len(text) <= length:
-        return text
-    
-    # 길이 내에서 마지막 공백 찾기
-    truncated = text[:length]
-    last_space = truncated.rfind(' ')
-    
-    if last_space > length * 0.8:  # 80% 이상이면 단어 단위로 자르기
-        return truncated[:last_space] + "..."
-    else:
-        return truncated + "..."
 
 def create_news_summary(news_list, max_news=8):
     """뉴스 요약 메시지 생성 (향상된 무료 버전)"""
@@ -293,7 +237,7 @@ def main():
         summary = create_news_summary(news_list, max_news=8)
         
         # 3. 텔레그램 전송
-        success = send_message_to_telegram(summary)
+        success = send_telegram_message(summary)
         
         if success:
             print("✅ 뉴스 요약 전송 완료!")
@@ -305,8 +249,7 @@ def main():
         print(error_msg)
         
         # 오류 발생 시 관리자에게 알림
-        if BOT_TOKEN and CHAT_ID:
-            send_message_to_telegram(f"🚨 <b>뉴스봇 오류 발생</b>\n\n{error_msg}")
+        send_telegram_message(f"🚨 <b>뉴스봇 오류 발생</b>\n\n{error_msg}")
 
 if __name__ == "__main__":
     main()
