@@ -4,8 +4,8 @@ name: News Bot Auto Run
 # GitHub Actions는 UTC 기준이므로 -9시간 (한국시간 9시 = UTC 0시, 한국시간 18시 = UTC 9시)
 on:
   schedule:
-    - cron: '0 0 * * *'    # 매일 오전 9시 (한국시간)
-    - cron: '0 9 * * *'    # 매일 오후 6시 (한국시간)
+    - cron: '0 21 * * *'    # 매일 오전 6시 (한국시간)
+    - cron: '0 7 * * *'    # 매일 오후 4시 (한국시간)
   
   # 수동 실행도 가능하게 설정
   workflow_dispatch:
