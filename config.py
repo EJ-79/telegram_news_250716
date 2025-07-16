@@ -36,9 +36,10 @@ NEWS_QUANTUM_KEYWORDS = [
 # 실적봇 설정
 EARNINGS_COMPANIES = [
     # 관심 있는 기업 티커 심볼들
-    'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA',
-    'ORCL', 'CRM', 'ADBE', 'INTC', 'AMD', 'QCOM', 'CSCO',
-    'IBM', 'NFLX', 'PYPL', 'UBER', 'LYFT', 'ZOOM', 'SNOW'
+    'GOOGL', 'META', '9988', '9888', '00020', '035420',
+    'MSFT', 'AMZN', 'ORCL', '9984', 
+    'NVDA', 'AVGO', 'AMD', 'INTC', 'MU', '000660', 'SNPS', 'CDNS', 'APH', 'VRT', 'MRVL', 'CRWV', '603019', '981', '2330', '2317', '3231', '3661'
+    'NFLX', 'IBM', 'IONQ'
 ]
 
 EARNINGS_RSS_FEEDS = {
