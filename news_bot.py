@@ -20,13 +20,13 @@ RSS_FEEDS = {
 AI_KEYWORDS = [
     'artificial intelligence', 'AI', 'machine learning', 'deep learning', 
     'neural network', 'LLM', 'ChatGPT', 'OpenAI', 'anthropic', 'claude',
-    'generative AI', 'transformer', 'GPT', 'large language model'
+    'generative AI', 'transformer', 'GPT', 'large language model', 'grok', 'Gemini'
 ]
 
 QUANTUM_KEYWORDS = [
     'quantum', 'qubit', 'quantum computing', 'quantum communication', 
     'quantum sensing', 'quantum internet', 'quantum supremacy', 
-    'quantum encryption', 'IBM quantum', 'Google quantum', 'quantum algorithm'
+    'quantum encryption', 'IBM quantum', 'Google quantum', 'quantum algorithm', 'Majorana', 'QKD', 'NISQ', 'FTQC'
 ]
 
 def send_message_to_telegram(message):
