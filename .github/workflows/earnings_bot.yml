@@ -1,0 +1,44 @@
+name: Earnings Bot Auto Run
+
+# 실적봇 스케줄 설정
+on:
+  schedule:
+    # 매주 월요일 오전 6시 (한국시간) - 이번 주 실적 발표 예정
+    - cron: '0 21 * * 0'
+    # 평일 오후 5시 (한국시간) - 당일 실적 요약 (월-금)
+    - cron: '0 8 * * 1-5'
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+
+jobs:
+  run-earnings-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. 코드 체크아웃
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    # 2. Python 환경 설정
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    # 3. 필요한 라이브러리 설치
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests feedparser
+    
+    # 4. 실적봇 실행
+    - name: Run Earnings Bot
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: python earnings_bot.py
+    
+    # 5. 실행 결과 로그
+    - name: Log completion
+      run: echo "Earnings bot completed at $(date)"
