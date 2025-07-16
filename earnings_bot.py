@@ -5,8 +5,115 @@ from datetime import datetime, timedelta
 import re
 from config import (
     EARNINGS_COMPANIES, EARNINGS_RSS_FEEDS, EARNINGS_KEYWORDS,
-    send_telegram_message
+    FMP_API_KEY, send_telegram_message
 )
+
+# Financial Modeling Prep API 설정 (config.py에서 가져옴)
+
+def get_real_earnings_calendar():
+    """실제 실적 발표 일정 가져오기 (Financial Modeling Prep API)"""
+    try:
+        # 오늘부터 7일간의 실적 발표 일정
+        today = datetime.now().strftime("%Y-%m-%d")
+        next_week = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+        
+        url = f"https://financialmodelingprep.com/api/v3/earning_calendar"
+        params = {
+            'from': today,
+            'to': next_week,
+            'apikey': FMP_API_KEY
+        }
+        
+        print(f"📡 실적 캘린더 API 호출 중... ({today} ~ {next_week})")
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            earnings_data = response.json()
+            print(f"📊 API 응답: {len(earnings_data)}개 실적 발표 예정")
+            
+            # 관심 기업만 필터링
+            relevant_earnings = []
+            for earning in earnings_data:
+                symbol = earning.get('symbol', '')
+                if symbol in EARNINGS_COMPANIES:
+                    relevant_earnings.append({
+                        'symbol': symbol,
+                        'date': earning.get('date', ''),
+                        'time': earning.get('time', 'N/A'),
+                        'eps_estimated': earning.get('epsEstimated', 'N/A'),
+                        'eps_actual': earning.get('eps', 'N/A'),
+                        'revenue_estimated': earning.get('revenueEstimated', 'N/A'),
+                        'revenue_actual': earning.get('revenue', 'N/A')
+                    })
+            
+            print(f"🎯 관심 기업 실적: {len(relevant_earnings)}개")
+            return relevant_earnings
+            
+        else:
+            print(f"❌ API 오류: {response.status_code}")
+            return []
+            
+    except Exception as e:
+        print(f"❌ 실적 캘린더 API 오류: {e}")
+        return []
+
+def get_earnings_with_fallback():
+    """실적 일정 가져오기 (API + RSS 백업)"""
+    # 1. 먼저 실제 API로 시도
+    api_earnings = get_real_earnings_calendar()
+    
+    if api_earnings:
+        return api_earnings, "API"
+    
+    # 2. API 실패 시 RSS에서 추출 시도
+    print("🔄 API 실패, RSS에서 실적 정보 추출 시도...")
+    rss_earnings = extract_earnings_from_rss()
+    
+    if rss_earnings:
+        return rss_earnings, "RSS"
+    
+    # 3. 둘 다 실패하면 빈 리스트
+    return [], "NONE"
+
+def extract_earnings_from_rss():
+    """RSS에서 실적 정보 추출"""
+    earnings_found = []
+    
+    for source_name, feed_url in EARNINGS_RSS_FEEDS.items():
+        try:
+            feed = feedparser.parse(feed_url)
+            entries = feed.entries if hasattr(feed, 'entries') else []
+            
+            for entry in entries[:10]:  # 최신 10개만 확인
+                title = entry.title if hasattr(entry, 'title') else ""
+                summary = entry.summary if hasattr(entry, 'summary') else ""
+                full_text = f"{title} {summary}"
+                
+                # 이번 주 실적 관련 키워드
+                week_keywords = ['this week', 'upcoming earnings', 'earnings calendar', 
+                               'earnings preview', 'earnings schedule']
+                
+                # 키워드 매칭
+                has_week_keyword = any(kw.lower() in full_text.lower() for kw in week_keywords)
+                
+                if has_week_keyword:
+                    # 기업 티커 추출
+                    companies = extract_company_ticker(full_text)
+                    
+                    for company in companies:
+                        earnings_found.append({
+                            'symbol': company,
+                            'date': 'This week',
+                            'time': 'TBA',
+                            'source': f"RSS: {source_name}",
+                            'title': title[:100] + "..." if len(title) > 100 else title
+                        })
+                        
+        except Exception as e:
+            print(f"❌ RSS 추출 오류 ({source_name}): {e}")
+            continue
+    
+    return earnings_found
 
 def extract_company_ticker(text):
     """텍스트에서 기업 티커 심볼 추출"""
@@ -185,24 +292,65 @@ def create_earnings_summary(earnings_list, max_news=6):
     return message
 
 def get_upcoming_earnings():
-    """이번 주 실적 발표 예정 기업들 (간단 버전)"""
-    # 실제로는 earnings calendar API를 사용해야 하지만
-    # 일단 RSS에서 "earnings" + "this week" 같은 키워드로 추정
-    upcoming = []
-    current_week = datetime.now().strftime("Week of %B %d")
+    """이번 주 실적 발표 예정 기업들 (실제 API 데이터)"""
+    current_week = datetime.now().strftime("Week of %B %d, %Y")
     
-    # 임시로 주요 기업들 중 일부를 표시
-    # 실제로는 Yahoo Finance나 Earnings Calendar API 사용 권장
-    sample_upcoming = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA'][:3]
+    # 실제 API 데이터 가져오기
+    earnings_data, source_type = get_earnings_with_fallback()
     
     message = f"📅 <b>이번 주 실적 발표 예정</b>\n"
-    message += f"🗓️ {current_week}\n\n"
+    message += f"🗓️ {current_week}\n"
+    message += f"📡 데이터 출처: {source_type}\n\n"
     
-    for i, ticker in enumerate(sample_upcoming, 1):
-        message += f"{i}. <b>{ticker}</b> - 실적 발표 예정\n"
+    if not earnings_data:
+        message += f"❌ <b>실적 데이터를 가져올 수 없습니다</b>\n\n"
+        message += f"🔍 관심 기업들: {', '.join(EARNINGS_COMPANIES[:5])}...\n"
+        message += f"💡 각 기업 IR 페이지에서 정확한 일정을 확인하세요.\n"
+        message += f"🔔 실적 발표 시 자동으로 요약을 보내드립니다!"
+        return message
     
-    message += f"\n💡 정확한 일정은 각 기업 IR 페이지를 확인하세요.\n"
-    message += f"🔔 실적 발표 시 자동으로 요약을 보내드립니다!"
+    # API 데이터로 메시지 구성
+    if source_type == "API":
+        # 날짜별로 그룹핑
+        by_date = {}
+        for earning in earnings_data:
+            date = earning['date']
+            if date not in by_date:
+                by_date[date] = []
+            by_date[date].append(earning)
+        
+        for date, companies in sorted(by_date.items()):
+            formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%m월 %d일 (%a)")
+            message += f"📊 <b>{formatted_date}</b>\n"
+            
+            for earning in companies:
+                symbol = earning['symbol']
+                time_info = earning['time']
+                eps_est = earning['eps_estimated']
+                
+                message += f"   🏢 <b>{symbol}</b>"
+                
+                if time_info and time_info != 'N/A':
+                    time_kr = "장 시작 전" if time_info == "bmo" else "장 마감 후" if time_info == "amc" else time_info
+                    message += f" ({time_kr})"
+                
+                if eps_est and eps_est != 'N/A':
+                    message += f"\n      💰 예상 EPS: ${eps_est}"
+                
+                message += f"\n"
+            
+            message += f"\n"
+            
+    else:  # RSS 데이터
+        message += f"📰 <b>RSS에서 발견된 실적 정보:</b>\n\n"
+        
+        unique_companies = list(set([e['symbol'] for e in earnings_data]))
+        for i, company in enumerate(unique_companies[:8], 1):
+            message += f"{i}. <b>{company}</b> - 이번 주 실적 발표 예정\n"
+    
+    message += f"\n💡 <b>정확한 시간과 날짜는 각 기업 IR 페이지를 확인하세요.</b>\n"
+    message += f"🔔 실적 발표 시 자동으로 요약을 보내드립니다!\n\n"
+    message += f"📈 관심 기업 목록: {', '.join(EARNINGS_COMPANIES[:5])} 외 {len(EARNINGS_COMPANIES)-5}개"
     
     return message
 
