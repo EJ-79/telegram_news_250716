@@ -32,6 +32,8 @@ NEWS_QUANTUM_KEYWORDS = [
     'quantum breakthrough', 'superconducting qubit', 'trapped ion',
     'photonic quantum', 'quantum annealing', 'D-Wave', 'IonQ', 'Rigetti'
 ]
+# 실적봇 API 설정
+FMP_API_KEY = os.getenv('FMP_API_KEY', 'demo')  # Financial Modeling Prep API 키
 
 # 실적봇 설정
 EARNINGS_COMPANIES = [
