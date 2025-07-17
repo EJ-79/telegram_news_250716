@@ -119,11 +119,11 @@ def smart_truncate(text, length):
         return truncated + "..."
 
 def collect_filtered_news():
-    """모든 사이트에서 뉴스 수집 및 필터링 (디버깅 버전)"""
+    """모든 사이트에서 뉴스 수집 및 필터링 (멀티소스 버전)"""
     all_filtered_news = []
     
-    print("🔍 뉴스 수집 시작...")
-    print("="*50)
+    print("🔍 멀티소스 뉴스 수집 시작...")
+    print("="*60)
     
     for site_name, feed_url in RSS_FEEDS.items():
         print(f"\n📰 {site_name} 분석 중...")
@@ -150,43 +150,27 @@ def collect_filtered_news():
             print(f"   🤖 AI 관련: {len(ai_news)}개")
             print(f"   ⚛️ 양자 관련: {len(quantum_news)}개")
             
-            # 매칭된 키워드 상세 정보
-            if ai_news:
-                print(f"   🎯 AI 매칭 키워드:")
-                for news in ai_news[:2]:  # 상위 2개만
-                    keywords = news.get('matched_keywords', [])
-                    print(f"      - {news['title'][:50]}... → {keywords[:3]}")
+            # 양자 전문 사이트는 특별히 표시
+            if 'quantum' in site_name.lower() or 'physics' in site_name.lower():
+                if quantum_news:
+                    print(f"   🎯 양자 전문 사이트 매칭: {len(quantum_news)}개")
+                    for news in quantum_news[:2]:
+                        keywords = news.get('matched_keywords', [])
+                        print(f"      ⚛️ {news['title'][:40]}... → {keywords[:2]}")
             
-            if quantum_news:
-                print(f"   🎯 양자 매칭 키워드:")
-                for news in quantum_news[:1]:  # 상위 1개만
+            # 매칭된 키워드 상세 정보 (간략화)
+            if ai_news and len(ai_news) <= 3:
+                for news in ai_news[:1]:
                     keywords = news.get('matched_keywords', [])
-                    print(f"      - {news['title'][:50]}... → {keywords[:3]}")
+                    print(f"   🎯 AI: {news['title'][:40]}... → {keywords[:2]}")
             
-            # 매칭 안 된 경우 최근 제목들 출력
-            if len(ai_news) == 0 and len(quantum_news) == 0:
-                print(f"   ❌ 매칭된 뉴스 없음. 최근 제목들:")
-                for i, entry in enumerate(feed.entries[:5], 1):
+            # 매칭 안 된 경우 (양자 전문 사이트만)
+            if (len(ai_news) == 0 and len(quantum_news) == 0 and 
+                ('quantum' in site_name.lower() or 'physics' in site_name.lower())):
+                print(f"   ❌ 양자 전문 사이트 매칭 실패. 최근 제목:")
+                for i, entry in enumerate(feed.entries[:2], 1):
                     title = entry.title if hasattr(entry, 'title') else "제목 없음"
-                    print(f"      {i}. {title[:60]}...")
-                    
-                # 키워드 테스트
-                print(f"   🔍 키워드 테스트 (첫 번째 기사):")
-                if feed.entries:
-                    first_entry = feed.entries[0]
-                    title = getattr(first_entry, 'title', '')
-                    summary = getattr(first_entry, 'summary', '')
-                    full_text = f"{title} {summary}".lower()
-                    
-                    # AI 키워드 중 일부 테스트
-                    test_keywords = ['AI', 'artificial intelligence', 'machine learning', 'neural network', 'OpenAI']
-                    found_keywords = [kw for kw in test_keywords if kw.lower() in full_text]
-                    
-                    if found_keywords:
-                        print(f"      ✅ 발견된 키워드: {found_keywords}")
-                    else:
-                        print(f"      ❌ AI 키워드 없음")
-                        print(f"      📝 전체 텍스트 샘플: {full_text[:100]}...")
+                    print(f"      {i}. {title[:50]}...")
             
             all_filtered_news.extend(ai_news)
             all_filtered_news.extend(quantum_news)
@@ -195,23 +179,91 @@ def collect_filtered_news():
             print(f"   💥 {site_name} 오류: {e}")
             continue
     
-    print("\n" + "="*50)
+    print("\n" + "="*60)
     print(f"🎯 총 수집 결과: {len(all_filtered_news)}개 뉴스")
     
     # 사이트별 통계
     site_stats = {}
+    ai_stats = {}
+    quantum_stats = {}
+    
     for news in all_filtered_news:
         source = news.get('source', 'Unknown')
+        category = news.get('category', 'Unknown')
+        
         site_stats[source] = site_stats.get(source, 0) + 1
+        
+        if category == 'AI':
+            ai_stats[source] = ai_stats.get(source, 0) + 1
+        elif category == 'Quantum':
+            quantum_stats[source] = quantum_stats.get(source, 0) + 1
     
-    print(f"📊 사이트별 통계:")
+    print(f"\n📊 사이트별 전체 통계:")
     for site, count in site_stats.items():
-        print(f"   {site}: {count}개")
+        ai_count = ai_stats.get(site, 0)
+        quantum_count = quantum_stats.get(site, 0)
+        print(f"   {site}: {count}개 (AI {ai_count}개, 양자 {quantum_count}개)")
+    
+    # 양자 전문 사이트 성과
+    quantum_sites = [s for s in site_stats.keys() if 'quantum' in s.lower() or 'physics' in s.lower()]
+    if quantum_sites:
+        print(f"\n⚛️ 양자 전문 사이트 성과:")
+        for site in quantum_sites:
+            q_count = quantum_stats.get(site, 0)
+            total = site_stats.get(site, 0)
+            print(f"   {site}: 양자 {q_count}개 / 전체 {total}개")
     
     return all_filtered_news
 
-def create_news_summary(news_list, max_news=8):
-    """뉴스 요약 메시지 생성 (향상된 무료 버전)"""
+def balance_news_by_source_advanced(news_list, max_count, max_per_source=2):
+    """고급 사이트별 균형 배분 - 라운드 로빈 방식"""
+    if not news_list:
+        return []
+    
+    # 사이트별로 뉴스 그룹핑
+    news_by_source = {}
+    for news in news_list:
+        source = news['source']
+        if source not in news_by_source:
+            news_by_source[source] = []
+        news_by_source[source].append(news)
+    
+    # 각 사이트의 뉴스를 중요도순으로 정렬
+    for source in news_by_source:
+        news_by_source[source].sort(key=lambda x: x['importance_score'], reverse=True)
+    
+    balanced = []
+    source_count = {source: 0 for source in news_by_source}
+    
+    # 라운드 로빈으로 각 사이트에서 순차적으로 선택
+    round_num = 0
+    sources = list(news_by_source.keys())
+    
+    while len(balanced) < max_count and round_num < max_per_source:
+        added_this_round = False
+        
+        for source in sources:
+            if len(balanced) >= max_count:
+                break
+                
+            # 해당 사이트에서 이번 라운드에 선택할 뉴스가 있는지 확인
+            if (round_num < len(news_by_source[source]) and 
+                source_count[source] < max_per_source):
+                
+                news_item = news_by_source[source][round_num]
+                balanced.append(news_item)
+                source_count[source] += 1
+                added_this_round = True
+        
+        if not added_this_round:
+            break
+            
+        round_num += 1
+    
+    return balanced
+
+def create_news_summary(news_list, max_news=18):
+    """뉴스 요약 메시지 생성 (고급 사이트별 균형 버전)"""
     if not news_list:
         return "📰 오늘은 AI/양자 관련 뉴스가 없습니다."
     
@@ -219,15 +271,28 @@ def create_news_summary(news_list, max_news=8):
     ai_news = [n for n in news_list if n['category'] == 'AI']
     quantum_news = [n for n in news_list if n['category'] == 'Quantum']
     
+    # 고급 사이트별 균형 맞추기
+    ai_show = balance_news_by_source_advanced(ai_news, max_count=12, max_per_source=2)
+    quantum_show = balance_news_by_source_advanced(quantum_news, max_count=6, max_per_source=2)
+    
     # 메시지 구성
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M')
     message = f"🤖 <b>AI & 양자 뉴스 요약</b>\n"
     message += f"📅 {current_time} (한국시간)\n"
-    message += f"🎯 총 {len(news_list)}개 뉴스 중 주요 뉴스\n\n"
+    message += f"🎯 총 {len(news_list)}개 뉴스 중 균형 선별 뉴스\n\n"
     
-    if ai_news:
-        message += f"🤖 <b>AI 뉴스 TOP {min(len(ai_news), max_news//2)}</b>\n\n"
-        for i, news in enumerate(ai_news[:max_news//2], 1):
+    if ai_show:
+        # 사이트별 통계
+        ai_sources = {}
+        for news in ai_show:
+            source = news['source']
+            ai_sources[source] = ai_sources.get(source, 0) + 1
+        
+        source_info = ", ".join([f"{source} {count}개" for source, count in ai_sources.items()])
+        message += f"🤖 <b>AI 뉴스 ({len(ai_show)}개)</b>\n"
+        message += f"   📊 출처: {source_info}\n\n"
+        
+        for i, news in enumerate(ai_show, 1):
             title = smart_truncate(news['title'], 85)
             
             message += f"<b>{i}. {title}</b>\n"
@@ -245,9 +310,18 @@ def create_news_summary(news_list, max_news=8):
             
             message += f"   🔗 <a href='{news['link']}'>기사 보기</a>\n\n"
     
-    if quantum_news:
-        message += f"⚛️ <b>양자 뉴스 TOP {min(len(quantum_news), max_news//2)}</b>\n\n"
-        for i, news in enumerate(quantum_news[:max_news//2], 1):
+    if quantum_show:
+        # 사이트별 통계
+        quantum_sources = {}
+        for news in quantum_show:
+            source = news['source']
+            quantum_sources[source] = quantum_sources.get(source, 0) + 1
+        
+        source_info = ", ".join([f"{source} {count}개" for source, count in quantum_sources.items()])
+        message += f"⚛️ <b>양자 뉴스 ({len(quantum_show)}개)</b>\n"
+        message += f"   📊 출처: {source_info}\n\n"
+        
+        for i, news in enumerate(quantum_show, 1):
             title = smart_truncate(news['title'], 85)
             
             message += f"<b>{i}. {title}</b>\n"
@@ -270,17 +344,32 @@ def create_news_summary(news_list, max_news=8):
     # 통계 정보 추가
     total_ai = len(ai_news)
     total_quantum = len(quantum_news)
-    message += f"\n📊 오늘의 뉴스 통계\n"
-    message += f"   🤖 AI: {total_ai}개 | ⚛️ 양자: {total_quantum}개\n"
+    
+    # 전체 사이트별 통계
+    all_sources = {}
+    for news in ai_show + quantum_show:
+        source = news['source']
+        all_sources[source] = all_sources.get(source, 0) + 1
+    
+    # 사이트 수 계산
+    total_sources = len(set([n['source'] for n in news_list]))
+    shown_sources = len(all_sources)
+    
+    message += f"\n📊 <b>오늘의 뉴스 통계</b>\n"
+    message += f"   🤖 AI: {total_ai}개 → 표시 {len(ai_show)}개\n"
+    message += f"   ⚛️ 양자: {total_quantum}개 → 표시 {len(quantum_show)}개\n"
+    message += f"   📰 활성 사이트: {shown_sources}/{total_sources}개\n"
+    message += f"   🎯 균형 배분: {', '.join([f'{s} {c}개' for s, c in all_sources.items()])}\n"
     message += f"\n🔄 <i>다음 업데이트: 12시간 후</i>\n"
-    message += f"🤖 <i>스마트 뉴스봇 v2.0</i>"
+    message += f"🤖 <i>멀티소스 뉴스봇 v3.0</i>"
     
     return message
 
 def main():
     """메인 실행 함수"""
-    print("🚀 뉴스봇 시작!")
+    print("🚀 멀티소스 뉴스봇 v3.0 시작!")
     print(f"⏰ 실행 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🌐 총 {len(RSS_FEEDS)}개 사이트 모니터링 중...")
     
     try:
         # 1. 뉴스 수집
@@ -288,7 +377,7 @@ def main():
         print(f"📊 총 수집된 뉴스: {len(news_list)}개")
         
         # 2. 요약 생성
-        summary = create_news_summary(news_list, max_news=8)
+        summary = create_news_summary(news_list, max_news=18)
         
         # 3. 텔레그램 전송
         success = send_telegram_message(summary)
@@ -299,7 +388,7 @@ def main():
             print("❌ 전송 실패")
             
     except Exception as e:
-        error_msg = f"❌ 뉴스봇 실행 오류: {e}"
+        error_msg = f"❌ 멀티소스 뉴스봇 실행 오류: {e}"
         print(error_msg)
         
         # 오류 발생 시 관리자에게 알림
