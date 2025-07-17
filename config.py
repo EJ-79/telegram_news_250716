@@ -6,10 +6,23 @@ CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 # 뉴스봇 설정
 NEWS_RSS_FEEDS = {
+    # 일반 기술 뉴스
     'TechCrunch': 'https://techcrunch.com/feed/',
     'Yahoo Finance': 'https://finance.yahoo.com/rss/',
-    'IEEE Spectrum': 'https://spectrum.ieee.org/rss/fulltext',
     'Ars Technica': 'https://feeds.arstechnica.com/arstechnica/index',
+    
+    # 학술/연구 뉴스
+    'IEEE Spectrum': 'https://spectrum.ieee.org/rss/fulltext',
+    'MIT Technology Review': 'https://www.technologyreview.com/feed/',
+    
+    # 양자 전문 사이트들
+    'Physics World': 'https://physicsworld.com/c/quantum-physics/feed/',
+    'Science Daily Quantum': 'https://www.sciencedaily.com/rss/computers_math/quantum_physics.xml',
+    'Quantum Computing Report': 'https://quantumcomputingreport.com/feed/',
+    
+    # 과학 전문 사이트들  
+    'Nature News': 'https://www.nature.com/nature.rss',
+    'Phys.org Quantum': 'https://phys.org/rss-feed/technology-news/quantum-physics/'
 }
 
 NEWS_AI_KEYWORDS = [
@@ -32,16 +45,14 @@ NEWS_QUANTUM_KEYWORDS = [
     'quantum breakthrough', 'superconducting qubit', 'trapped ion',
     'photonic quantum', 'quantum annealing', 'D-Wave', 'IonQ', 'Rigetti'
 ]
+
 # 실적봇 API 설정
 FMP_API_KEY = os.getenv('FMP_API_KEY', 'demo')  # Financial Modeling Prep API 키
-
-# 실적봇 설정
 EARNINGS_COMPANIES = [
     # 관심 있는 기업 티커 심볼들
-    'GOOGL', 'META', '9988', '9888', '00020', '035420',
-    'MSFT', 'AMZN', 'ORCL', '9984', 
-    'NVDA', 'AVGO', 'AMD', 'INTC', 'MU', '000660', 'SNPS', 'CDNS', 'APH', 'VRT', 'MRVL', 'CRWV', '603019', '981', '2330', '2317', '3231', '3661'
-    'NFLX', 'IBM', 'IONQ'
+    'AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA',
+    'ORCL', 'CRM', 'ADBE', 'INTC', 'AMD', 'QCOM', 'CSCO',
+    'IBM', 'NFLX', 'PYPL', 'UBER', 'LYFT', 'ZOOM', 'SNOW'
 ]
 
 EARNINGS_RSS_FEEDS = {
