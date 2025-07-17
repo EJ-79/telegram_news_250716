@@ -26,13 +26,13 @@ NEWS_RSS_FEEDS = {
 }
 
 NEWS_AI_KEYWORDS = [
-    'artificial intelligence', 'AI', 'machine learning', 'deep learning', 
+    'artificial intelligence', 'machine learning', 'deep learning', 
     'neural network', 'LLM', 'ChatGPT', 'OpenAI', 'anthropic', 'claude',
     'generative AI', 'transformer', 'GPT', 'large language model',
     'computer vision', 'natural language processing', 'NLP', 'robotics',
     'autonomous', 'self-driving', 'AI chip', 'nvidia AI', 'google AI',
     'microsoft AI', 'AI startup', 'AI funding', 'AI breakthrough',
-    'foundation model', 'multimodal AI', 'AI safety', 'AGI'
+    'foundation model', 'multimodal AI', 'AI safety', 'AGI', 'Grok', 'physical AI'
 ]
 
 NEWS_QUANTUM_KEYWORDS = [
@@ -43,7 +43,7 @@ NEWS_QUANTUM_KEYWORDS = [
     'quantum advantage', 'quantum error correction', 'quantum entanglement',
     'quantum teleportation', 'quantum simulation', 'quantum startup',
     'quantum breakthrough', 'superconducting qubit', 'trapped ion',
-    'photonic quantum', 'quantum annealing', 'D-Wave', 'IonQ', 'Rigetti'
+    'photonic quantum', 'quantum annealing', 'D-Wave', 'IonQ', 'Rigetti', 'Microsoft quantum', 'QKD'
 ]
 
 # 실적봇 API 설정
