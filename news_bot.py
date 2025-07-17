@@ -119,20 +119,23 @@ def smart_truncate(text, length):
         return truncated + "..."
 
 def collect_filtered_news():
-    """모든 사이트에서 뉴스 수집 및 필터링"""
+    """모든 사이트에서 뉴스 수집 및 필터링 (디버깅 버전)"""
     all_filtered_news = []
     
     print("🔍 뉴스 수집 시작...")
+    print("="*50)
     
     for site_name, feed_url in RSS_FEEDS.items():
-        print(f"📰 {site_name} 분석 중...")
+        print(f"\n📰 {site_name} 분석 중...")
         try:
             # RSS 피드 파싱
             feed = feedparser.parse(feed_url)
             
             if not hasattr(feed, 'entries') or not feed.entries:
-                print(f"   ⚠️ {site_name}: 뉴스가 없습니다.")
+                print(f"   ❌ {site_name}: 뉴스가 없습니다.")
                 continue
+            
+            print(f"   📊 전체 뉴스: {len(feed.entries)}개")
             
             # AI 키워드로 필터링
             ai_news = filter_news_by_keywords(feed.entries, AI_KEYWORDS, "AI")
@@ -147,12 +150,63 @@ def collect_filtered_news():
             print(f"   🤖 AI 관련: {len(ai_news)}개")
             print(f"   ⚛️ 양자 관련: {len(quantum_news)}개")
             
+            # 매칭된 키워드 상세 정보
+            if ai_news:
+                print(f"   🎯 AI 매칭 키워드:")
+                for news in ai_news[:2]:  # 상위 2개만
+                    keywords = news.get('matched_keywords', [])
+                    print(f"      - {news['title'][:50]}... → {keywords[:3]}")
+            
+            if quantum_news:
+                print(f"   🎯 양자 매칭 키워드:")
+                for news in quantum_news[:1]:  # 상위 1개만
+                    keywords = news.get('matched_keywords', [])
+                    print(f"      - {news['title'][:50]}... → {keywords[:3]}")
+            
+            # 매칭 안 된 경우 최근 제목들 출력
+            if len(ai_news) == 0 and len(quantum_news) == 0:
+                print(f"   ❌ 매칭된 뉴스 없음. 최근 제목들:")
+                for i, entry in enumerate(feed.entries[:5], 1):
+                    title = entry.title if hasattr(entry, 'title') else "제목 없음"
+                    print(f"      {i}. {title[:60]}...")
+                    
+                # 키워드 테스트
+                print(f"   🔍 키워드 테스트 (첫 번째 기사):")
+                if feed.entries:
+                    first_entry = feed.entries[0]
+                    title = getattr(first_entry, 'title', '')
+                    summary = getattr(first_entry, 'summary', '')
+                    full_text = f"{title} {summary}".lower()
+                    
+                    # AI 키워드 중 일부 테스트
+                    test_keywords = ['AI', 'artificial intelligence', 'machine learning', 'neural network', 'OpenAI']
+                    found_keywords = [kw for kw in test_keywords if kw.lower() in full_text]
+                    
+                    if found_keywords:
+                        print(f"      ✅ 발견된 키워드: {found_keywords}")
+                    else:
+                        print(f"      ❌ AI 키워드 없음")
+                        print(f"      📝 전체 텍스트 샘플: {full_text[:100]}...")
+            
             all_filtered_news.extend(ai_news)
             all_filtered_news.extend(quantum_news)
             
         except Exception as e:
-            print(f"   ❌ {site_name} 오류: {e}")
+            print(f"   💥 {site_name} 오류: {e}")
             continue
+    
+    print("\n" + "="*50)
+    print(f"🎯 총 수집 결과: {len(all_filtered_news)}개 뉴스")
+    
+    # 사이트별 통계
+    site_stats = {}
+    for news in all_filtered_news:
+        source = news.get('source', 'Unknown')
+        site_stats[source] = site_stats.get(source, 0) + 1
+    
+    print(f"📊 사이트별 통계:")
+    for site, count in site_stats.items():
+        print(f"   {site}: {count}개")
     
     return all_filtered_news
 
